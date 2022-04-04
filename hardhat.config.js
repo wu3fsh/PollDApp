@@ -1,11 +1,11 @@
 require('@nomiclabs/hardhat-waffle');
 require('@nomiclabs/hardhat-web3');
 require('@nomiclabs/hardhat-ethers');
+require('solidity-coverage');
 require('./tasks/create-poll');
 require('./tasks/get-info');
 require('./tasks/vote');
 require('./tasks/finish-poll');
-require('./tasks/can-finish-poll');
 require('./tasks/withdraw-commission');
 require('./tasks/create-poll-custom-duration');
 require('./tasks/get-polls');

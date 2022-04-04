@@ -1,29 +1,34 @@
 pragma solidity ^0.7.0;
 
-import "hardhat/console.sol"; // for debug
-
 // ToDo: add openZeppelin SafeMath
 contract PollFactory {
     address[] public polls;
     address public owner;
     uint256 public constant defaultPollDurationSeconds = 60 * 60 * 24 * 3;
 
+    modifier restricted() {
+        require(
+            msg.sender == owner,
+            "Only the owner of the contract can perform this operation"
+        );
+        _;
+    }
+
     constructor() {
         owner = msg.sender;
     }
 
-    function createPoll() public {
-        require(msg.sender == owner);
-
+    function createPoll() public restricted {
         address newPoll = address(
             new Poll(msg.sender, defaultPollDurationSeconds)
         );
         polls.push(newPoll);
     }
 
-    function createPollWithCustomDuration(uint256 pollDurationSeconds) public {
-        require(msg.sender == owner);
-
+    function createPollWithCustomDuration(uint256 pollDurationSeconds)
+        public
+        restricted
+    {
         address newPoll = address(new Poll(msg.sender, pollDurationSeconds));
         polls.push(newPoll);
     }
@@ -44,7 +49,10 @@ contract Poll {
     bool public isCompleted;
 
     modifier restricted() {
-        require(msg.sender == manager);
+        require(
+            msg.sender == manager,
+            "Only the owner of the contract can perform this operation"
+        );
         _;
     }
 
@@ -55,9 +63,15 @@ contract Poll {
     }
 
     function vote(address to) public payable {
-        require(block.timestamp <= (startDate + pollDurationSeconds));
-        require(msg.value == 10000000000000000);
-        require(voters[msg.sender] != true);
+        require(
+            block.timestamp <= (startDate + pollDurationSeconds),
+            "The poll has already expired"
+        );
+        require(
+            msg.value == 10000000000000000,
+            "Donation must be equal to 0.01 eth"
+        );
+        require(voters[msg.sender] != true, "This address has already voted");
 
         voters[msg.sender] = true;
         uint256 votesCount = participants[to];
@@ -74,8 +88,11 @@ contract Poll {
     }
 
     function finishPoll() public {
-        require(block.timestamp > (startDate + pollDurationSeconds));
-        require(!isCompleted);
+        require(
+            block.timestamp > (startDate + pollDurationSeconds),
+            "Poll time is not over yet"
+        );
+        require(!isCompleted, "The poll has already finished");
 
         uint256 balance = address(this).balance;
         if (balance > 0 && participantsList.length > 0) {
@@ -88,8 +105,8 @@ contract Poll {
     }
 
     function withdrawCommission() public restricted {
-        require(isCompleted);
-        require(address(this).balance > 0, "Balance is zero");
+        require(isCompleted, "The poll hasn't finished yet");
+        require(address(this).balance > 0, "The poll balance is zero");
 
         // send money to manager
         payable(manager).transfer(address(this).balance);
@@ -117,10 +134,6 @@ contract Poll {
             participantsList.length,
             manager
         );
-    }
-
-    function getLeader() public view returns (address, uint256) {
-        return (currentWinner, participants[currentWinner]);
     }
 
     function hasVoted(address source) public view returns (bool) {
